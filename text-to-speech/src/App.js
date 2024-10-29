@@ -1,8 +1,7 @@
 import React, { useState, useRef } from "react";
-import { Input, Button, message, Select } from "antd";
+import { Input, Button, message, Select, Checkbox } from "antd";
 import axios from "axios";
-import { split } from "sentence-splitter";
-import { GlobalOutlined } from "@ant-design/icons"; // Using GlobalOutlined instead
+import { GlobalOutlined } from "@ant-design/icons";
 import "./App.css";
 const { Option } = Select;
 
@@ -10,13 +9,14 @@ const App = () => {
   const [text, setText] = useState("");
   const [sentences, setSentences] = useState([]);
   const [translations, setTranslations] = useState({});
-  const [audioUrl, setAudioUrl] = useState("");
   const [hoveredSentence, setHoveredSentence] = useState("");
   const [loading, setLoading] = useState(false);
   const audioRef = useRef(null);
-  const [selectedVoice, setSelectedVoice] = useState("en-US-JennyNeural"); // Default English voice
+  const [selectedVoice, setSelectedVoice] = useState("en-US-JennyNeural");
+  const [sequentialPlay, setSequentialPlay] = useState(false);
   const audioCache = useRef({});
-  // Example list of English TTS voices (could be fetched from backend if available)
+  const currentIndexRef = useRef(0); // Track the current sentence index for sequential play
+
   const englishVoices = [
     { label: "English (US) - Jenny", value: "en-US-JennyNeural" },
     { label: "English (US) - Guy", value: "en-US-GuyNeural" },
@@ -34,17 +34,19 @@ const App = () => {
     setSelectedVoice(value);
   };
 
+  const handleSequentialToggle = (e) => {
+    setSequentialPlay(e.target.checked);
+  };
+
   const handleSplitSentences = async () => {
     const response = await axios.post("http://127.0.0.1:5000/splitSentence", {
       passage: text,
     });
-    console.log("resp", response);
-
     setSentences(response.data.filter((i) => i.trim().length));
     setTranslations({});
   };
 
-  const handleSentenceClick = async (sentence) => {
+  const handleSentenceClick = async (sentence, index) => {
     if (loading) return;
 
     if (audioRef.current) {
@@ -52,6 +54,7 @@ const App = () => {
       audioRef.current.src = "";
     }
 
+    currentIndexRef.current = index; // Set the index for sequential play
     setLoading(true);
 
     if (audioCache.current[sentence]) {
@@ -79,6 +82,18 @@ const App = () => {
   const playAudio = (url) => {
     audioRef.current = new Audio(url);
     audioRef.current.play();
+    if (sequentialPlay) {
+      audioRef.current.onended = handlePlayNext; // Continue to next sentence if sequential play is enabled
+    }
+  };
+
+  const handlePlayNext = () => {
+    if (currentIndexRef.current + 1 < sentences.length) {
+      currentIndexRef.current += 1;
+      handleSentenceClick(sentences[currentIndexRef.current], currentIndexRef.current);
+    } else {
+      message.success("Reached the end of selected sentences.");
+    }
   };
 
   const handleReadAllClick = async () => {
@@ -96,7 +111,7 @@ const App = () => {
     try {
       const response = await axios.post(
         "http://127.0.0.1:5000/getAudioFromSentence",
-        { sentence: text },
+        { sentence: text, voice: selectedVoice },
         { responseType: "blob" }
       );
       const url = URL.createObjectURL(
@@ -139,7 +154,7 @@ const App = () => {
         <span
           onMouseEnter={() => setHoveredSentence(sentence)}
           onMouseLeave={() => setHoveredSentence("")}
-          onClick={() => handleSentenceClick(sentence)}
+          onClick={() => handleSentenceClick(sentence, index)}
           className={hoveredSentence === sentence ? "highlight" : ""}
           style={{ cursor: "pointer", display: "block" }}
         >
@@ -147,7 +162,7 @@ const App = () => {
           <GlobalOutlined
             style={{ marginLeft: "8px", cursor: "pointer" }}
             onClick={(e) => {
-              e.stopPropagation(); // Prevent triggering sentence click
+              e.stopPropagation();
               handleTranslateClick(sentence);
             }}
           />
@@ -174,6 +189,12 @@ const App = () => {
           </Option>
         ))}
       </Select>
+      <Checkbox
+        style={{ marginBottom: "10px", marginLeft: "10px" }}
+        onChange={handleSequentialToggle}
+      >
+        Enable Sequential Reading
+      </Checkbox>
       <Input.TextArea
         rows={4}
         value={text}
@@ -196,9 +217,6 @@ const App = () => {
         Read Entire Passage
       </Button>
       <div style={{ marginTop: "20px" }}>{renderHighlightedPassage()}</div>
-      {audioUrl && (
-        <audio controls src={audioUrl} style={{ marginTop: "20px" }} />
-      )}
     </div>
   );
 };

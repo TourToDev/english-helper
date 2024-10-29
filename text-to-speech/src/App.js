@@ -1,9 +1,10 @@
 import React, { useState, useRef } from "react";
-import { Input, Button, message } from "antd";
+import { Input, Button, message, Select } from "antd";
 import axios from "axios";
 import { split } from "sentence-splitter";
 import { GlobalOutlined } from "@ant-design/icons"; // Using GlobalOutlined instead
 import "./App.css";
+const { Option } = Select;
 
 const App = () => {
   const [text, setText] = useState("");
@@ -13,19 +14,33 @@ const App = () => {
   const [hoveredSentence, setHoveredSentence] = useState("");
   const [loading, setLoading] = useState(false);
   const audioRef = useRef(null);
+  const [selectedVoice, setSelectedVoice] = useState("en-US-JennyNeural"); // Default English voice
   const audioCache = useRef({});
+  // Example list of English TTS voices (could be fetched from backend if available)
+  const englishVoices = [
+    { label: "English (US) - Jenny", value: "en-US-JennyNeural" },
+    { label: "English (US) - Guy", value: "en-US-GuyNeural" },
+    { label: "English (UK) - Libby", value: "en-GB-LibbyNeural" },
+    { label: "English (UK) - Ryan", value: "en-GB-RyanNeural" },
+    { label: "English (Australia) - Natasha", value: "en-AU-NatashaNeural" },
+    { label: "English (Canada) - Clara", value: "en-CA-ClaraNeural" },
+  ];
 
   const handleTextChange = (e) => {
     setText(e.target.value);
   };
 
-  const handleSplitSentences = () => {
-    const result = split(text);
-    setSentences(
-      result
-        .map((sentence) => sentence.raw)
-        .filter((item) => item.trim().length)
-    );
+  const handleVoiceChange = (value) => {
+    setSelectedVoice(value);
+  };
+
+  const handleSplitSentences = async () => {
+    const response = await axios.post("http://127.0.0.1:5000/splitSentence", {
+      passage: text,
+    });
+    console.log("resp", response);
+
+    setSentences(response.data.filter((i) => i.trim().length));
     setTranslations({});
   };
 
@@ -45,7 +60,7 @@ const App = () => {
       try {
         const response = await axios.post(
           "http://127.0.0.1:5000/getAudioFromSentence",
-          { sentence },
+          { sentence, voice: selectedVoice },
           { responseType: "blob" }
         );
         const url = URL.createObjectURL(
@@ -100,12 +115,11 @@ const App = () => {
   const handleTranslateClick = async (sentence) => {
     setLoading(true);
     try {
-      const response = await axios.get(
-        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
-          sentence
-        )}&langpair=en|zh`
-      );
-      const translation = response.data.responseData.translatedText;
+      const response = await axios.post("http://127.0.0.1:5000/translate", {
+        text: sentence,
+        dest_lang: "zh-CN",
+      });
+      const translation = response.data.translated_text;
 
       setTranslations((prev) => ({
         ...prev,
@@ -148,7 +162,18 @@ const App = () => {
   };
 
   return (
-    <div style={{ padding: "20px", width:"760px" }}>
+    <div style={{ padding: "20px", width: "760px" }}>
+      <Select
+        style={{ width: 250, marginBottom: "10px" }}
+        defaultValue={selectedVoice}
+        onChange={handleVoiceChange}
+      >
+        {englishVoices.map((voice) => (
+          <Option key={voice.value} value={voice.value}>
+            {voice.label}
+          </Option>
+        ))}
+      </Select>
       <Input.TextArea
         rows={4}
         value={text}

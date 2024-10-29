@@ -1,46 +1,80 @@
 import io
 import edge_tts
-import os
-from flask import Flask, request, send_file
+from flask import Flask, request, send_file, jsonify
 from flask_cors import CORS
-
+from sentence_splitter import SentenceSplitter
+from googletrans import Translator
 
 app = Flask(__name__)
-
 
 # Enable CORS for all routes and origins
 CORS(app)
 
+# Initialize the sentence splitter and translator
+splitter = SentenceSplitter(language='en')
+translator = Translator()
+
+@app.route('/getAudioFromSentence', methods=['POST'])
 @app.route('/getAudioFromSentence', methods=['POST'])
 async def get_audio_from_sentence():
     try:
-        # Get the sentence from the client
         data = request.json
         sentence = data.get('sentence', '')
-        print('sentence::')
+        voice = data.get('voice', 'en-US-AvaNeural')  # Default voice
+
+        print('sentence:')
         print(sentence)
+        print('voice:')
+        print(voice)
+
         if not sentence:
             return {"error": "No sentence provided"}, 400
 
-        # Initialize edge-tts communicator with the specified voice
-        voice = "en-US-AvaNeural"  # Change voice as needed
         communicator = edge_tts.Communicate(sentence, voice)
 
-        # Create an in-memory BytesIO stream
         audio_stream = io.BytesIO()
-
-        # Write audio data to the BytesIO stream
         async for chunk in communicator.stream():
             if chunk["type"] == "audio":
                 audio_stream.write(chunk["data"])
 
-        # Seek to the beginning of the BytesIO stream for reading
         audio_stream.seek(0)
+        return send_file(audio_stream, as_attachment=True, download_name="audio_output.mp3", mimetype="audio/mpeg")
 
-        # Send the audio data as a response
-        response = send_file(audio_stream, as_attachment=True, download_name="audio_output.mp3", mimetype="audio/mpeg")
+    except Exception as e:
+        print(e)
+        return {"error": str(e)}, 500
 
-        return response
+
+@app.route('/splitSentence', methods=['POST'])
+def split_sentence():
+    try:
+        data = request.json
+        passage = data.get('passage', '')
+        print('passage:')
+        print(passage)
+        if not passage:
+            return {"error": "No passage provided"}, 400
+
+        sentences = splitter.split(passage)
+        return jsonify(sentences)
+
+    except Exception as e:
+        print(e)
+        return {"error": str(e)}, 500
+
+@app.route('/translate', methods=['POST'])
+def translate_text():
+    try:
+        data = request.json
+        text = data.get('text', '')
+        dest_lang = data.get('dest_lang', 'en')
+        print('text:')
+        print(text)
+        if not text:
+            return {"error": "No text provided"}, 400
+
+        translation = translator.translate(text, dest=dest_lang)
+        return jsonify({'translated_text': translation.text})
 
     except Exception as e:
         print(e)

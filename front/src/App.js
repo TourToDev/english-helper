@@ -2,9 +2,9 @@ import React, { useState, useRef } from "react";
 import { Input, Button, message, Select, Checkbox } from "antd";
 import axios from "axios";
 import { GlobalOutlined } from "@ant-design/icons";
+import voices from "./constants/voicesList";
 import "./App.css";
 const { Option } = Select;
-
 const App = () => {
   const [text, setText] = useState("");
   const [sentences, setSentences] = useState([]);
@@ -16,15 +16,6 @@ const App = () => {
   const [sequentialPlay, setSequentialPlay] = useState(false);
   const audioCache = useRef({});
   const currentIndexRef = useRef(0); // Track the current sentence index for sequential play
-
-  const englishVoices = [
-    { label: "English (US) - Jenny", value: "en-US-JennyNeural" },
-    { label: "English (US) - Guy", value: "en-US-GuyNeural" },
-    { label: "English (UK) - Libby", value: "en-GB-LibbyNeural" },
-    { label: "English (UK) - Ryan", value: "en-GB-RyanNeural" },
-    { label: "English (Australia) - Natasha", value: "en-AU-NatashaNeural" },
-    { label: "English (Canada) - Clara", value: "en-CA-ClaraNeural" },
-  ];
 
   const handleTextChange = (e) => {
     setText(e.target.value);
@@ -90,7 +81,10 @@ const App = () => {
   const handlePlayNext = () => {
     if (currentIndexRef.current + 1 < sentences.length) {
       currentIndexRef.current += 1;
-      handleSentenceClick(sentences[currentIndexRef.current], currentIndexRef.current);
+      handleSentenceClick(
+        sentences[currentIndexRef.current],
+        currentIndexRef.current
+      );
     } else {
       message.success("Reached the end of selected sentences.");
     }
@@ -155,7 +149,11 @@ const App = () => {
           onMouseEnter={() => setHoveredSentence(sentence)}
           onMouseLeave={() => setHoveredSentence("")}
           onClick={() => handleSentenceClick(sentence, index)}
-          className={hoveredSentence === sentence ? "highlight" : ""}
+          className={
+            hoveredSentence === sentence || currentIndexRef.current === index
+              ? "highlight"
+              : ""
+          }
           style={{ cursor: "pointer", display: "block" }}
         >
           {sentence}
@@ -177,13 +175,13 @@ const App = () => {
   };
 
   return (
-    <div style={{ padding: "20px", width: "760px" }}>
+    <div className="break-reader" style={{ padding: "20px", width: "760px" }}>
       <Select
         style={{ width: 250, marginBottom: "10px" }}
         defaultValue={selectedVoice}
         onChange={handleVoiceChange}
       >
-        {englishVoices.map((voice) => (
+        {voices.map((voice) => (
           <Option key={voice.value} value={voice.value}>
             {voice.label}
           </Option>
@@ -216,7 +214,9 @@ const App = () => {
       >
         Read Entire Passage
       </Button>
-      <div style={{ marginTop: "20px" }}>{renderHighlightedPassage()}</div>
+      <div style={{ marginTop: "20px", marginLeft: "20%" }}>
+        {renderHighlightedPassage()}
+      </div>
     </div>
   );
 };

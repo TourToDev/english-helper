@@ -17,6 +17,10 @@ const App = () => {
   const audioRef = useRef(null);
   const [selectedVoice, setSelectedVoice] = useState("en-US-JennyNeural");
   const [sequentialPlay, setSequentialPlay] = useState(false);
+  const [curPlayingIndex, setCurPlayingIndex] = useState(0);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [allowTranslation, setIsAllowTranslation] = useState(false);
+  const isPausedRef = useRef(false); // Ref to track pause state
   const audioCache = useRef({});
   const currentIndexRef = useRef(0);
 
@@ -31,7 +35,7 @@ const App = () => {
     const newSentences = response.data.filter((i) => i.trim().length);
     setSentences(newSentences);
     setTranslations({});
-    
+
     // Preload audio if sequential play is enabled
     if (sequentialPlay) {
       preloadAudio(newSentences);
@@ -39,37 +43,64 @@ const App = () => {
   };
 
   const preloadAudio = async (sentencesToPreload) => {
-    const newLoadingSentences = {};
-    setLoadingSentences({}); // Reset loading states
+    const newLoadingSentences = {}; // Initialize loading state object
+    setLoadingSentences(newLoadingSentences); // Reset loading states
 
     for (const sentence of sentencesToPreload) {
+      if (isPausedRef.current) {
+        console.log("Audio preloading paused");
+        return; // Break out of loop if paused
+      }
+
+      if (audioCache.current[sentence]) {
+        console.log("sentence is cached already");
+        continue;
+      }
+
       newLoadingSentences[sentence] = true; // Set loading state for this sentence
+      setLoadingSentences((prev) => ({ ...prev, [sentence]: true }));
+
       try {
+        console.log("Start to preload sentence", sentence);
         const response = await axios.post(
           "http://127.0.0.1:5000/getAudioFromSentence",
           { sentence, voice: selectedVoice },
           { responseType: "blob" }
         );
-        const url = URL.createObjectURL(new Blob([response.data], { type: "audio/mp3" }));
-        audioCache.current[sentence] = url;
+        const url = URL.createObjectURL(
+          new Blob([response.data], { type: "audio/mp3" })
+        );
+        audioCache.current[sentence] = url; // Cache the audio URL
       } catch (error) {
         message.error(`Error generating audio for sentence: ${sentence}`);
+      } finally {
+        newLoadingSentences[sentence] = false; // Mark sentence as loaded
+        setLoadingSentences((prev) => ({ ...prev, [sentence]: false }));
       }
-      newLoadingSentences[sentence] = false; // Mark loading as finished
     }
 
-    setLoadingSentences(newLoadingSentences); // Update loading states
+    // Final update for loading states after the loop finishes
+    setLoadingSentences(newLoadingSentences);
+  };
+
+  const togglePause = () => {
+    isPausedRef.current = !isPausedRef.current; // Toggle the ref value
+    console.log("Pause state:", isPausedRef.current);
+    if (!isPausedRef.current) {
+      preloadAudio(sentences);
+    }
   };
 
   const handleSentenceClick = async (sentence, index) => {
     if (loading || loadingSentences[sentence]) return;
 
     if (audioRef.current) {
-      audioRef.current.pause();
+      stopAudioPlaying();
       audioRef.current.src = "";
     }
 
     currentIndexRef.current = index;
+    setCurPlayingIndex(index);
     setLoading(true);
 
     if (audioCache.current[sentence]) {
@@ -81,7 +112,9 @@ const App = () => {
           { sentence, voice: selectedVoice },
           { responseType: "blob" }
         );
-        const url = URL.createObjectURL(new Blob([response.data], { type: "audio/mp3" }));
+        const url = URL.createObjectURL(
+          new Blob([response.data], { type: "audio/mp3" })
+        );
         audioCache.current[sentence] = url;
         playAudio(url);
       } catch (error) {
@@ -95,15 +128,34 @@ const App = () => {
   const playAudio = (url) => {
     audioRef.current = new Audio(url);
     audioRef.current.play();
+    setIsAudioPlaying(true);
     if (sequentialPlay) {
       audioRef.current.onended = handlePlayNext;
+    }
+  };
+
+  const stopAudioPlaying = () => {
+    audioRef.current.pause();
+    setIsAudioPlaying(false);
+  };
+
+  const toggleAudioPlaying = () => {
+    if (isAudioPlaying) {
+      stopAudioPlaying();
+    } else {
+      audioRef.current.play();
+      setIsAudioPlaying(true);
     }
   };
 
   const handlePlayNext = () => {
     if (currentIndexRef.current + 1 < sentences.length) {
       currentIndexRef.current += 1;
-      handleSentenceClick(sentences[currentIndexRef.current], currentIndexRef.current);
+      setCurPlayingIndex(currentIndexRef.current);
+      handleSentenceClick(
+        sentences[currentIndexRef.current],
+        currentIndexRef.current
+      );
     } else {
       message.success("Reached the end of selected sentences.");
     }
@@ -116,7 +168,7 @@ const App = () => {
     }
 
     if (audioRef.current) {
-      audioRef.current.pause();
+      stopAudioPlaying();
     }
 
     setLoading(true);
@@ -127,15 +179,22 @@ const App = () => {
         { sentence: text, voice: selectedVoice },
         { responseType: "blob" }
       );
-      const url = URL.createObjectURL(new Blob([response.data], { type: "audio/mp3" }));
+      const url = URL.createObjectURL(
+        new Blob([response.data], { type: "audio/mp3" })
+      );
 
       audioRef.current = new Audio(url);
       audioRef.current.play();
+      setIsAudioPlaying(true);
     } catch (error) {
       message.error("Error generating audio for the entire passage.");
     }
 
     setLoading(false);
+  };
+
+  const toggleAllowTranslation = () => {
+    setIsAllowTranslation((prev) => !prev);
   };
 
   const handleTranslateClick = async (sentence) => {
@@ -166,22 +225,26 @@ const App = () => {
     }
 
     if (audioRef.current) {
-      audioRef.current.pause();
+      stopAudioPlaying();
     }
 
     setLoading(true);
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const audioContext = new (window.AudioContext ||
+      window.webkitAudioContext)();
     const source = audioContext.createBufferSource();
     source.connect(audioContext.destination);
 
     try {
-      const response = await fetch("http://127.0.0.1:5000/getStreamingAudioFromSentence", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ sentence: text, voice: selectedVoice })
-      });
+      const response = await fetch(
+        "http://127.0.0.1:5000/getStreamingAudioFromSentence",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ sentence: text, voice: selectedVoice }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Network response was not ok");
@@ -201,6 +264,7 @@ const App = () => {
 
       audioRef.current = new Audio(audioUrl);
       audioRef.current.play();
+      setIsAudioPlaying(true);
 
       audioRef.current.onended = () => {
         setLoading(false);
@@ -219,7 +283,7 @@ const App = () => {
           onMouseLeave={() => setHoveredSentence("")}
           onClick={() => handleSentenceClick(sentence, index)}
           className={
-            hoveredSentence === sentence || currentIndexRef.current === index
+            hoveredSentence === sentence || curPlayingIndex === index
               ? "highlight"
               : ""
           }
@@ -229,13 +293,15 @@ const App = () => {
             <Spin size="small" style={{ marginRight: "8px" }} />
           ) : null}
           {sentence}
-          <GlobalOutlined
-            style={{ marginLeft: "8px", cursor: "pointer" }}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleTranslateClick(sentence);
-            }}
-          />
+          {allowTranslation ? (
+            <GlobalOutlined
+              style={{ marginLeft: "8px", cursor: "pointer" }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTranslateClick(sentence);
+              }}
+            />
+          ) : null}
         </span>
         {translations[sentence] && (
           <div style={{ marginLeft: "20px", color: "#555" }}>
@@ -265,6 +331,12 @@ const App = () => {
       >
         Enable Sequential Reading
       </Checkbox>
+      <Checkbox
+        style={{ marginBottom: "10px", marginLeft: "10px" }}
+        onChange={toggleAllowTranslation}
+      >
+        Enable Translation
+      </Checkbox>
       <Input.TextArea
         rows={4}
         value={text}
@@ -292,9 +364,25 @@ const App = () => {
       >
         Stream Read
       </Button>
-      <div style={{ marginTop: "20px" }}>
-        {renderHighlightedPassage()}
-      </div>
+      <Button
+        type="default"
+        color="default"
+        variant="filled"
+        onClick={toggleAudioPlaying}
+        style={{ marginTop: "10px", marginLeft: "10px" }}
+      >
+        Pause
+      </Button>
+      <Button
+        type="default"
+        color="default"
+        variant="filled"
+        onClick={togglePause}
+        style={{ marginTop: "10px", marginLeft: "10px" }}
+      >
+        {isPausedRef.current ? "Resume Preloading" : "Pause Preloading"}
+      </Button>
+      <div style={{ marginTop: "20px" }}>{renderHighlightedPassage()}</div>
     </div>
   );
 };

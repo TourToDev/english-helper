@@ -314,75 +314,80 @@ const App = () => {
 
   return (
     <div className="break-reader" style={{ padding: "20px", width: "760px" }}>
-      <Select
-        style={{ width: 250, marginBottom: "10px" }}
-        defaultValue={selectedVoice}
-        onChange={handleVoiceChange}
-      >
-        {voices.map((voice) => (
-          <Option key={voice.value} value={voice.value}>
-            {voice.label}
-          </Option>
-        ))}
-      </Select>
-      <Checkbox
-        style={{ marginBottom: "10px", marginLeft: "10px" }}
-        onChange={handleSequentialToggle}
-      >
-        Enable Sequential Reading
-      </Checkbox>
-      <Checkbox
-        style={{ marginBottom: "10px", marginLeft: "10px" }}
-        onChange={toggleAllowTranslation}
-      >
-        Enable Translation
-      </Checkbox>
-      <Input.TextArea
-        rows={4}
-        value={text}
-        onChange={handleTextChange}
-        placeholder="Enter your paragraph here"
-      />
-      <Button
-        type="primary"
-        onClick={handleSplitSentences}
-        style={{ marginTop: "10px" }}
-      >
-        Split Sentences
-      </Button>
-      <Button
-        type="default"
-        onClick={handleReadAllClick}
-        style={{ marginTop: "10px", marginLeft: "10px" }}
-      >
-        Read All
-      </Button>
-      <Button
-        type="default"
-        onClick={handleStreamingReadClick}
-        style={{ marginTop: "10px", marginLeft: "10px" }}
-      >
-        Stream Read
-      </Button>
-      <Button
-        type="default"
-        color="default"
-        variant="filled"
-        onClick={toggleAudioPlaying}
-        style={{ marginTop: "10px", marginLeft: "10px" }}
-      >
-        Pause
-      </Button>
-      <Button
-        type="default"
-        color="default"
-        variant="filled"
-        onClick={togglePause}
-        style={{ marginTop: "10px", marginLeft: "10px" }}
-      >
-        {isPausedRef.current ? "Resume Preloading" : "Pause Preloading"}
-      </Button>
-      <div style={{ marginTop: "20px" }}>{renderHighlightedPassage()}</div>
+      <div className="break-reader-operations">
+        <Select
+          style={{ width: 250, marginBottom: "10px" }}
+          defaultValue={selectedVoice}
+          onChange={handleVoiceChange}
+        >
+          {voices.map((voice) => (
+            <Option key={voice.value} value={voice.value}>
+              {voice.label}
+            </Option>
+          ))}
+        </Select>
+        <Checkbox
+          style={{ marginBottom: "10px", marginLeft: "10px" }}
+          onChange={handleSequentialToggle}
+        >
+          Enable Sequential Reading
+        </Checkbox>
+        <Checkbox
+          style={{ marginBottom: "10px", marginLeft: "10px" }}
+          onChange={toggleAllowTranslation}
+        >
+          Enable Translation
+        </Checkbox>
+        <Input.TextArea
+          rows={4}
+          value={text}
+          onChange={handleTextChange}
+          placeholder="Enter your paragraph here"
+        />
+        <Button
+          type="primary"
+          onClick={handleSplitSentences}
+          style={{ marginTop: "10px" }}
+        >
+          Split Sentences
+        </Button>
+        <Button
+          type="default"
+          onClick={handleReadAllClick}
+          style={{ marginTop: "10px", marginLeft: "10px" }}
+        >
+          Read All
+        </Button>
+        <Button
+          type="default"
+          onClick={handleStreamingReadClick}
+          style={{ marginTop: "10px", marginLeft: "10px" }}
+        >
+          Stream Read
+        </Button>
+        <Button
+          type="default"
+          color="default"
+          variant="filled"
+          onClick={toggleAudioPlaying}
+          style={{ marginTop: "10px", marginLeft: "10px" }}
+        >
+          Pause
+        </Button>
+        <Button
+          type="default"
+          color="default"
+          variant="filled"
+          onClick={togglePause}
+          style={{ marginTop: "10px", marginLeft: "10px" }}
+        >
+          {isPausedRef.current ? "Resume Preloading" : "Pause Preloading"}
+        </Button>
+      </div>
+
+      <div className="break-reader-mainContent" style={{ marginTop: "20px" }}>
+        {renderHighlightedPassage()}
+      </div>
     </div>
   );
 };

@@ -1,5 +1,11 @@
+#root {
+  height: 100vh;
+  overflow: hidden;
+  background-color: beige;
+}
+
 .highlight {
-  background-color: rgba(255, 255, 0, 0.5); /* Change this to your preferred highlight color */
+  background-color: azure; /* Change this to your preferred highlight color */
 }
 .break-reader {
   display: flex;
@@ -10,11 +16,16 @@
 }
 
 .break-reader-mainContent {
-  font-family: "Mukta", sans-serif !important;
+  font-family: "CopernicusTrial", sans-serif !important;
   min-width: 640px;
   max-width: 640px;
   margin-left: 20px;
   height: 90vh;
   overflow-y: auto;
   padding: 0 20px;
+}
+
+.break-reader-sentence {
+  padding: 8px 12px;
+  border-radius: 4px;
 }

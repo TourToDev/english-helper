@@ -4,9 +4,25 @@ from flask import Flask, request, Response, send_file, jsonify
 from flask_cors import CORS
 from sentence_splitter import SentenceSplitter
 from googletrans import Translator
+import re
 import asyncio
 import threading
+# Function to clean OCR text
+def clean_ocr_text(ocr_text):
+    # Step 1: Remove unwanted line breaks within sentences
+    cleaned_text = re.sub(r'(?<=\S)\n(?=\S)', ' ', ocr_text)  # remove line breaks between words
+    cleaned_text = re.sub(r'(?<=\S)\n', ' ', cleaned_text)  # remove line breaks at end of lines
 
+    # Step 2: Remove multiple spaces (OCR can introduce extra spaces between words)
+    cleaned_text = re.sub(r' +', ' ', cleaned_text)
+
+    # Step 3: Restore logical paragraph breaks (assuming double line breaks indicate paragraph)
+    cleaned_text = re.sub(r'\n\n+', '\n\n', cleaned_text)  # normalize multiple paragraph breaks
+
+    # Step 4: Optionally, remove special characters or artifacts
+    cleaned_text = re.sub(r'[^\w\s,\.!?]', '', cleaned_text)  # keep only alphanumeric, space, punctuation
+
+    return cleaned_text
 app = Flask(__name__)
 
 # Enable CORS for all routes and origins
@@ -54,6 +70,7 @@ def split_sentence():
         passage = data.get('passage', '')
         print('passage:')
         print(passage)
+        #cleaned_passage = clean_ocr_text(passage)
         if not passage:
             return {"error": "No passage provided"}, 400
 

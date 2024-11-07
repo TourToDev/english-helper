@@ -284,8 +284,8 @@ const App = () => {
           onClick={() => handleSentenceClick(sentence, index)}
           className={
             hoveredSentence === sentence || curPlayingIndex === index
-              ? "highlight"
-              : ""
+              ? "highlight break-reader-sentence"
+              : "break-reader-sentence"
           }
           style={{ cursor: "pointer", display: "block" }}
         >

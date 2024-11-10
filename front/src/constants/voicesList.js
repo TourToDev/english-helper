@@ -1,11 +1,17 @@
 const englishVoices = [
+  { label: "English (US) - Brian", value: "en-US-BrianNeural" },
+  { label: "English (US) - Christopher", value: "en-US-ChristopherNeural" },
+  {
+    label: "English (US) - Emma (Multilingual)",
+    value: "en-US-EmmaMultilingualNeural",
+  },
+  { label: "English (US) - Emma", value: "en-US-EmmaNeural" },
   { label: "English (US) - Jenny", value: "en-US-JennyNeural" },
   { label: "English (US) - Guy", value: "en-US-GuyNeural" },
   { label: "English (UK) - Libby", value: "en-GB-LibbyNeural" },
   { label: "English (UK) - Ryan", value: "en-GB-RyanNeural" },
   { label: "English (Australia) - Natasha", value: "en-AU-NatashaNeural" },
   { label: "English (Canada) - Clara", value: "en-CA-ClaraNeural" },
-
   // Extended voices
   { label: "English (Australia) - William", value: "en-AU-WilliamNeural" },
   { label: "English (Canada) - Liam", value: "en-CA-LiamNeural" },
@@ -33,13 +39,7 @@ const englishVoices = [
     label: "English (US) - Brian (Multilingual)",
     value: "en-US-BrianMultilingualNeural",
   },
-  { label: "English (US) - Brian", value: "en-US-BrianNeural" },
-  { label: "English (US) - Christopher", value: "en-US-ChristopherNeural" },
-  {
-    label: "English (US) - Emma (Multilingual)",
-    value: "en-US-EmmaMultilingualNeural",
-  },
-  { label: "English (US) - Emma", value: "en-US-EmmaNeural" },
+
   { label: "English (US) - Eric", value: "en-US-EricNeural" },
   { label: "English (US) - Michelle", value: "en-US-MichelleNeural" },
   { label: "English (US) - Roger", value: "en-US-RogerNeural" },

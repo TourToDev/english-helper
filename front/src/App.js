@@ -1,5 +1,14 @@
 import React, { useState, useRef } from "react";
-import { Input, Button, message, Select, Checkbox, Spin } from "antd";
+import {
+  Input,
+  Button,
+  message,
+  Select,
+  Checkbox,
+  Spin,
+  Slider,
+  Typography,
+} from "antd";
 import axios from "axios";
 import { GlobalOutlined } from "@ant-design/icons";
 import voices from "./constants/voicesList";
@@ -13,14 +22,15 @@ const App = () => {
   const [translations, setTranslations] = useState({});
   const [hoveredSentence, setHoveredSentence] = useState("");
   const [loading, setLoading] = useState(false);
-  const [loadingSentences, setLoadingSentences] = useState({}); // New state for loading sentences
+  const [loadingSentences, setLoadingSentences] = useState({});
   const audioRef = useRef(null);
-  const [selectedVoice, setSelectedVoice] = useState("en-US-JennyNeural");
+  const [selectedVoice, setSelectedVoice] = useState("en-US-BrianNeural");
   const [sequentialPlay, setSequentialPlay] = useState(false);
   const [curPlayingIndex, setCurPlayingIndex] = useState(0);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const [allowTranslation, setIsAllowTranslation] = useState(false);
-  const isPausedRef = useRef(false); // Ref to track pause state
+  const isPausedRef = useRef(false);
   const audioCache = useRef({});
   const currentIndexRef = useRef(0);
 
@@ -127,6 +137,7 @@ const App = () => {
 
   const playAudio = (url) => {
     audioRef.current = new Audio(url);
+    audioRef.current.playbackRate = playbackRate;
     audioRef.current.play();
     setIsAudioPlaying(true);
     if (sequentialPlay) {
@@ -275,6 +286,13 @@ const App = () => {
     }
   };
 
+  const handleSpeedChange = (value) => {
+    setPlaybackRate(value);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = value;
+    }
+  };
+
   const renderHighlightedPassage = () => {
     return sentences.map((sentence, index) => (
       <div key={index} style={{ marginBottom: "10px" }}>
@@ -383,6 +401,17 @@ const App = () => {
         >
           {isPausedRef.current ? "Resume Preloading" : "Pause Preloading"}
         </Button>
+        <div style={{ width: 300, marginTop: "20px" }}>
+          <Typography.Text>Playback Speed: {playbackRate}x</Typography.Text>
+          <Slider
+            min={0.5}
+            max={2.0}
+            step={0.1}
+            value={playbackRate}
+            onChange={handleSpeedChange}
+            tooltip={{ formatter: (value) => `${value}x` }}
+          />
+        </div>
       </div>
 
       <div className="break-reader-mainContent" style={{ marginTop: "20px" }}>
